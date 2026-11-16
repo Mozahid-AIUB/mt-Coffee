@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  EMPLOYEE @map("employee")
+  ADMIN    @map("admin")
+}
+
+enum SnackOrderStatus {
+  PENDING   @map("pending")
+  PREPARING @map("preparing")
+  SERVED    @map("served")
+  CANCELLED @map("cancelled")
+}
+
+model User {
+  id         String   @id @default(uuid()) @db.Uuid
+  fullName   String   @db.VarChar(60)
+  employeeId String   @unique
+  phone      String   @unique
+  email      String   @unique
+  password   String
+  role       UserRole @default(EMPLOYEE)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
+
+  createdLunchMenus LunchMenu[]        @relation("MenuCreator")
+  lunchCheckins     LunchCheckin[]
+  snackOrders       SnackOrder[]
+  pushSubscriptions PushSubscription[]
+
+  @@map("users")
+}
+
+model LunchMenu {
+  id          String   @id @default(uuid()) @db.Uuid
+  date        DateTime @unique @db.Date
+  cutoffAt    DateTime @db.Timestamptz(6)
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  creator  User           @relation("MenuCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  dishes   LunchDish[]
+  checkins LunchCheckin[]
+
+  @@map("lunch_menus")
+}
+
+model LunchDish {
+  id          String   @id @default(uuid()) @db.Uuid
+  menuId      String   @db.Uuid
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  menu     LunchMenu      @relation(fields: [menuId], references: [id], onDelete: Restrict)
+  checkins LunchCheckin[]
+
+  @@unique([menuId, name])
+  @@unique([id, menuId])
+  @@map("lunch_dishes")
+}
+
+model LunchCheckin {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  menuId      String   @db.Uuid
+  date        DateTime @db.Date
+  dishId      String   @db.Uuid
+  dishName    String
+  checkedInAt DateTime @default(now()) @db.Timestamptz(6)
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  menu LunchMenu @relation(fields: [menuId], references: [id], onDelete: Restrict)
+  dish LunchDish @relation(fields: [dishId, menuId], references: [id, menuId], onDelete: Restrict)
+
+  @@unique([userId, date])
+  @@index([menuId])
+  @@map("lunch_checkins")
+}
+
+model SnackItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  options     Json?
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  orders SnackOrder[]
+
+  @@map("snack_items")
+}
+
+model SnackOrder {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  itemId    String           @db.Uuid
+  itemName  String
+  quantity  Int
+  options   Json?
+  location  String           @db.VarChar(60)
+  note      String?          @db.VarChar(150)
+  status    SnackOrderStatus @default(PENDING)
+  notified  Boolean          @default(false)
+  createdAt DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime         @updatedAt @db.Timestamptz(6)
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  item SnackItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("snack_orders")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
