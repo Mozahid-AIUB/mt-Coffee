@@ -1,25 +1,39 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Mail, Lock } from "lucide-react";
 import AuthShell from "../components/AuthShell";
 import FormInput from "../components/FormInput";
 import Button from "../components/Button";
+import { useAuth } from "../context/AuthContext";
 import { loginSchema } from "../utils/validators";
-import { popupSuccess } from "../utils/popup";
+import { homePathFor } from "../utils/roles";
+import { popupQuick } from "../utils/popup";
 
 export default function Login() {
+  const { user, login } = useAuth();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(loginSchema) });
 
+  // আগে থেকেই login করা থাকলে সরাসরি নিজের পেজে
+  if (user) return <Navigate to={homePathFor(user)} replace />;
+
   const onSubmit = async (data) => {
-    // এখন শুধু নকল অপেক্ষা। পরে এখানে NestJS login API বসবে।
-    await new Promise((r) => setTimeout(r, 800));
-    console.log("login data:", data);
-    popupSuccess("Login successful", "Demo only. API is not connected yet.");
+    // নকল (demo) login: পরে এখানে NestJS login API বসবে।
+    // email "admin" দিয়ে শুরু হলে Admin, নইলে Employee।
+    await new Promise((r) => setTimeout(r, 700));
+    const name = data.email.split("@")[0];
+    const isAdmin = name.toLowerCase().startsWith("admin");
+    await popupQuick("Login successful");
+    login({
+      fullName: name.charAt(0).toUpperCase() + name.slice(1),
+      employeeId: isAdmin ? "ADMIN001" : "DEMO-001",
+      email: data.email,
+      role: isAdmin ? "admin" : "employee",
+    });
   };
 
   return (
