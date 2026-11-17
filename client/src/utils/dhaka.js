@@ -37,6 +37,36 @@ export const formatDate = (date) =>
     timeZone: "UTC",
   });
 
+// স্ন্যাকস সার্ভিস চালু আছে কি না (সকাল ৮টা - রাত ৮টা ঢাকা সময়)
+export function snackServiceOpen(now = Date.now()) {
+  const t = new Date(now + OFFSET);
+  const h = t.getUTCHours();
+  return h >= 8 && h < 20;
+}
+
+// পরের opening/closing সময় পর্যন্ত কত মিলিসেকেন্ড বাকি
+export function nextSnackBoundary(now = Date.now()) {
+  const t = new Date(now + OFFSET);
+  const h = t.getUTCHours();
+  const m = t.getUTCMinutes();
+  const s = t.getUTCSeconds();
+  const ms = t.getUTCMilliseconds();
+  const currentMs = ((h * 60 + m) * 60 + s) * 1000 + ms;
+  const isOpen = h >= 8 && h < 20;
+  // ৮টা = 8*3600*1000, রাত ৮টা = 20*3600*1000
+  const targetMs = isOpen ? 20 * 3600000 : (h < 8 ? 8 * 3600000 : 24 * 3600000 + 8 * 3600000);
+  return targetMs - currentMs;
+}
+
+export function formatClock(now = Date.now()) {
+  const t = new Date(now + OFFSET);
+  const h = t.getUTCHours();
+  const m = t.getUTCMinutes();
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 export function formatCountdown(ms) {
   const totalMin = Math.max(0, Math.floor(ms / 60000));
   const d = Math.floor(totalMin / 1440);
