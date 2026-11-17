@@ -35,6 +35,7 @@ model User {
   lunchCheckins     LunchCheckin[]
   snackOrders       SnackOrder[]
   pushSubscriptions PushSubscription[]
+  refreshTokens     RefreshToken[]
 
   @@map("users")
 }
@@ -137,4 +138,18 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime  @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
