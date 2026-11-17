@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Coffee, Filter, Calendar, RefreshCw } from "lucide-react";
+import { Coffee, Filter, Calendar, RefreshCw, Bell, BellOff } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { getAdminOrders, updateOrderStatus } from "../api/adminSnacksApi";
 import { useSnackOrders } from "../context/SnackOrderContext";
 import { popupConfirm, popupError } from "../utils/popup";
 import StatusBadge from "../components/StatusBadge";
 import { ToastContainer } from "../components/Toast";
+import { isPushSupported, getPermission, getSubscription, subscribe, unsubscribe, sendTestNotification } from "../utils/push";
 
 // ========== Status action buttons ==========
 const STATUS_ACTIONS = {
@@ -171,6 +172,33 @@ export default function AdminSnacks() {
   const { refresh: refreshBadge } = useSnackOrders();
   const toastIdRef = useRef(0);
 
+  // পুশ নোটিফিকেশন state
+  const [pushState, setPushState] = useState("loading"); // loading | unsupported | off | on | denied
+  useEffect(() => {
+    if (!isPushSupported()) { setPushState("unsupported"); return; }
+    if (getPermission() === "denied") { setPushState("denied"); return; }
+    getSubscription()
+      .then((sub) => setPushState(sub ? "on" : "off"))
+      .catch(() => setPushState("off"));
+  }, []);
+
+  const handlePushToggle = async () => {
+    if (pushState === "on") {
+      await unsubscribe();
+      setPushState("off");
+      addToast("Notifications disabled");
+    } else {
+      try {
+        await subscribe();
+        setPushState("on");
+        addToast("Notifications enabled!");
+        sendTestNotification();
+      } catch {
+        if (getPermission() === "denied") setPushState("denied");
+      }
+    }
+  };
+
   const addToast = (message, type = "success") => {
     const id = ++toastIdRef.current;
     setToasts((prev) => [...prev, { id, message, type, duration: 3000 }]);
@@ -219,14 +247,39 @@ export default function AdminSnacks() {
             )}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={load}
-          className="grid size-10 place-items-center rounded-2xl border border-border text-muted transition hover:bg-surface-2 hover:text-fg"
-          aria-label="Refresh"
-        >
-          <RefreshCw className="size-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* পুশ নোটিফিকেশন toggle */}
+          {pushState !== "unsupported" && pushState !== "loading" && (
+            <button
+              type="button"
+              onClick={handlePushToggle}
+              disabled={pushState === "denied"}
+              title={
+                pushState === "denied"
+                  ? "Notifications blocked by browser"
+                  : pushState === "on"
+                  ? "Disable notifications"
+                  : "Enable notifications"
+              }
+              className={`flex h-10 items-center gap-1.5 rounded-2xl border px-3 text-xs font-medium transition disabled:opacity-40 ${
+                pushState === "on"
+                  ? "border-success/40 text-success hover:bg-success/10"
+                  : "border-border text-muted hover:bg-surface-2 hover:text-fg"
+              }`}
+            >
+              {pushState === "on" ? <Bell className="size-4" /> : <BellOff className="size-4" />}
+              {pushState === "on" ? "On" : pushState === "denied" ? "Blocked" : "Notify"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={load}
+            className="grid size-10 place-items-center rounded-2xl border border-border text-muted transition hover:bg-surface-2 hover:text-fg"
+            aria-label="Refresh"
+          >
+            <RefreshCw className="size-4" />
+          </button>
+        </div>
       </div>
 
       <div className="mt-4">
