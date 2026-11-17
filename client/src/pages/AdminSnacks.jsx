@@ -1,12 +1,275 @@
-import { Bell } from "lucide-react";
-import ComingSoon from "../components/ComingSoon";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Coffee, Filter, Calendar, RefreshCw } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { getAdminOrders, updateOrderStatus } from "../api/adminSnacksApi";
+import { useSnackOrders } from "../context/SnackOrderContext";
+import { popupConfirm, popupError } from "../utils/popup";
+import StatusBadge from "../components/StatusBadge";
+import { ToastContainer } from "../components/Toast";
 
-export default function AdminSnacks() {
+// ========== Status action buttons ==========
+const STATUS_ACTIONS = {
+  pending: [
+    { label: "Preparing", next: "preparing", style: "bg-accent/15 text-accent hover:bg-accent/25" },
+    { label: "Cancel", next: "cancelled", style: "bg-danger/15 text-danger hover:bg-danger/25", confirm: true },
+  ],
+  preparing: [
+    { label: "Served", next: "served", style: "bg-success/15 text-success hover:bg-success/25" },
+    { label: "Cancel", next: "cancelled", style: "bg-danger/15 text-danger hover:bg-danger/25", confirm: true },
+  ],
+  served: [],
+  cancelled: [],
+};
+
+function OrderCard({ order, onStatusChange }) {
+  const [busy, setBusy] = useState(false);
+  const actions = STATUS_ACTIONS[order.status] || [];
+
+  const time = new Date(order.createdAt).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const optText = order.options ? Object.values(order.options).join(", ") : "";
+
+  const handleAction = async (action) => {
+    if (action.confirm) {
+      const ok = await popupConfirm(
+        "Cancel this order?",
+        `${order.itemName} × ${order.quantity} — ${order.employee.fullName}`,
+        "Yes, cancel"
+      );
+      if (!ok) return;
+    }
+    setBusy(true);
+    try {
+      await onStatusChange(order.id, action.next);
+    } catch (e) {
+      popupError("Could not update", e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <ComingSoon
-      icon={Bell}
-      title="Snack Orders"
-      description="Live list of tea and coffee orders."
-    />
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="rounded-2xl border border-border bg-surface p-4 shadow-card"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm">{order.itemName}</span>
+            <span className="text-xs text-muted">× {order.quantity}</span>
+            <StatusBadge status={order.status} />
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            {optText}{optText && " · "}{order.location}
+            {order.note && ` · "${order.note}"`}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            <span className="font-medium text-fg">{order.employee.fullName}</span>
+            {" "}({order.employee.employeeId}) · {time}
+          </p>
+        </div>
+      </div>
+
+      {actions.length > 0 && (
+        <div className="mt-3 flex gap-2">
+          {actions.map((a) => (
+            <button
+              key={a.next}
+              type="button"
+              disabled={busy}
+              onClick={() => handleAction(a)}
+              className={`flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition ${a.style} disabled:opacity-50`}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </motion.article>
+  );
+}
+
+// ========== Filter bar ==========
+function FilterBar({ status, setStatus, date, setDate }) {
+  const statuses = [
+    { value: "all", label: "All" },
+    { value: "pending", label: "Pending" },
+    { value: "preparing", label: "Preparing" },
+    { value: "served", label: "Served" },
+    { value: "cancelled", label: "Cancelled" },
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-1.5">
+        <Filter className="size-4 text-muted" aria-hidden />
+        <div className="flex gap-1">
+          {statuses.map((s) => (
+            <button
+              key={s.value}
+              type="button"
+              onClick={() => setStatus(s.value)}
+              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition ${
+                status === s.value
+                  ? "bg-accent text-accent-fg"
+                  : "bg-surface-2 text-muted hover:text-fg"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Calendar className="size-4 text-muted" aria-hidden />
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="h-8 rounded-xl border border-border bg-transparent px-2 text-xs outline-none focus:ring-2 focus:ring-accent/40"
+        />
+        {date && (
+          <button
+            type="button"
+            onClick={() => setDate("")}
+            className="text-xs text-muted hover:text-fg"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ========== Skeleton ==========
+function Skeleton() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="h-24 animate-pulse rounded-2xl border border-border bg-surface-2/60" />
+      ))}
+    </div>
+  );
+}
+
+// ========== Main Page ==========
+export default function AdminSnacks() {
+  const [orders, setOrders] = useState(null);
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState("all");
+  const [date, setDate] = useState("");
+  const [toasts, setToasts] = useState([]);
+  const { refresh: refreshBadge } = useSnackOrders();
+  const toastIdRef = useRef(0);
+
+  const addToast = (message, type = "success") => {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev, { id, message, type, duration: 3000 }]);
+  };
+  const removeToast = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
+
+  const load = useCallback(async () => {
+    try {
+      const list = await getAdminOrders({ status: status === "all" ? undefined : status, date: date || undefined });
+      setOrders(list);
+      setError("");
+    } catch {
+      setError("Could not load orders. Please try again.");
+    }
+  }, [status, date]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // ১০ সেকেন্ড পর পর poll
+  useEffect(() => {
+    const id = setInterval(load, 10000);
+    return () => clearInterval(id);
+  }, [load]);
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    await updateOrderStatus(orderId, newStatus);
+    addToast(`Order marked as ${newStatus}`);
+    await load();
+    refreshBadge();
+  };
+
+  const orderCount = orders?.length || 0;
+  const pendingCount = orders?.filter((o) => o.status === "pending").length || 0;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Snack Orders</h1>
+          <p className="mt-1 text-sm text-muted">
+            Live list of tea and coffee orders.
+            {pendingCount > 0 && (
+              <span className="ml-2 font-semibold text-warning">{pendingCount} pending</span>
+            )}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={load}
+          className="grid size-10 place-items-center rounded-2xl border border-border text-muted transition hover:bg-surface-2 hover:text-fg"
+          aria-label="Refresh"
+        >
+          <RefreshCw className="size-4" />
+        </button>
+      </div>
+
+      <div className="mt-4">
+        <FilterBar status={status} setStatus={setStatus} date={date} setDate={setDate} />
+      </div>
+
+      <div className="mt-5">
+        {error ? (
+          <div className="rounded-3xl border border-danger/40 bg-danger/10 p-6 text-center">
+            <p className="text-sm text-danger">{error}</p>
+            <button
+              type="button"
+              onClick={load}
+              className="mt-3 h-10 rounded-xl bg-accent px-5 text-sm font-medium text-accent-fg"
+            >
+              Try again
+            </button>
+          </div>
+        ) : !orders ? (
+          <Skeleton />
+        ) : orderCount === 0 ? (
+          <div className="rounded-3xl border border-dashed border-border bg-surface/60 px-6 py-16 text-center">
+            <div className="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-accent/15 text-accent">
+              <Coffee className="size-8" />
+            </div>
+            <p className="font-semibold">No orders found</p>
+            <p className="mt-1 text-sm text-muted">
+              {status !== "all" || date ? "Try changing the filters." : "Orders will appear here when employees place them."}
+            </p>
+          </div>
+        ) : (
+          <AnimatePresence mode="popLayout">
+            <div className="space-y-3">
+              {orders.map((o) => (
+                <OrderCard key={o.id} order={o} onStatusChange={handleStatusChange} />
+              ))}
+            </div>
+          </AnimatePresence>
+        )}
+      </div>
+
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+    </div>
   );
 }
