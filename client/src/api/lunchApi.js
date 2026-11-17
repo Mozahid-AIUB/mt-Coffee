@@ -6,62 +6,21 @@
 //   cancelCheckin()    -> DELETE /api/lunch/checkin/:menuId
 // ======================================================================
 import { weekDates, dayNameOf, cutoffMs } from "../utils/dhaka";
+import { readMenus, readCheckins, saveCheckins } from "./mockMenus";
 
-const MENUS = [
-  [
-    { name: "Chicken Biryani", description: "Basmati rice, roasted chicken, boiled egg" },
-    { name: "Beef Tehari", description: "Spiced rice with tender beef" },
-  ],
-  [
-    { name: "Rice with Fish Curry", description: "Rui fish curry, dal, vegetables" },
-    { name: "Vegetable Khichuri", description: "Lentils and rice, fried eggplant" },
-  ],
-  [
-    { name: "Chicken Roast with Polao", description: "Polao, chicken roast, salad" },
-    { name: "Beef Curry with Rice", description: "Beef bhuna, dal, mixed vegetables" },
-    { name: "Egg Curry with Rice", description: "Egg curry, dal, vegetables" },
-  ],
-  [
-    { name: "Mutton Kacchi", description: "Kacchi biryani, borhani" },
-    { name: "Chicken Kacchi", description: "Kacchi biryani, borhani" },
-  ],
-  [
-    { name: "Rice with Chicken Curry", description: "Chicken curry, dal, vegetables" },
-    { name: "Fried Rice with Chicken Chili", description: "Egg fried rice, chili chicken" },
-  ],
-];
-
-const NO_MENU_INDEX = 1; // নমুনা: এই দিনে মেনু দেওয়া হয়নি
-const KEY = "mt_demo_checkins";
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function readSaved() {
-  try {
-    return JSON.parse(localStorage.getItem(KEY)) || {};
-  } catch {
-    return {};
-  }
-}
-function save(map) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(map));
-  } catch {
-    /* ignore */
-  }
-}
-
 const buildDays = () => {
-  const saved = readSaved();
-  return weekDates().map((date, i) => {
+  const menus = readMenus();
+  const saved = readCheckins();
+  return weekDates().map((date) => {
     const closesAt = cutoffMs(date);
-    if (i === NO_MENU_INDEX) {
+    const menu = menus[date];
+    if (!menu) {
       return { menuId: null, date, dayName: dayNameOf(date), dishes: [], myDishId: null, closesAt };
     }
-    const menuId = `m-${date}`;
-    const dishes = MENUS[i].map((d, n) => ({ id: `d-${date}-${n}`, ...d }));
-    // নমুনা: রবিবারে আগে থেকেই একটা dish বাছাই করা
-    const myDishId = saved[menuId] ?? (i === 0 ? dishes[0].id : null);
-    return { menuId, date, dayName: dayNameOf(date), dishes, myDishId, closesAt };
+    const myDishId = saved[menu.id] ?? null;
+    return { menuId: menu.id, date, dayName: dayNameOf(date), dishes: menu.dishes, myDishId, closesAt };
   });
 };
 
@@ -75,9 +34,9 @@ export async function checkin(menuId, dishId) {
   const day = buildDays().find((d) => d.menuId === menuId);
   if (!day) throw new Error("Menu not found");
   if (Date.now() >= day.closesAt) throw new Error("Check-in is closed for this day");
-  const saved = readSaved();
+  const saved = readCheckins();
   saved[menuId] = dishId;
-  save(saved);
+  saveCheckins(saved);
 }
 
 export async function cancelCheckin(menuId) {
@@ -85,7 +44,7 @@ export async function cancelCheckin(menuId) {
   const day = buildDays().find((d) => d.menuId === menuId);
   if (!day) throw new Error("Menu not found");
   if (Date.now() >= day.closesAt) throw new Error("Check-in is closed for this day");
-  const saved = readSaved();
+  const saved = readCheckins();
   saved[menuId] = null;
-  save(saved);
+  saveCheckins(saved);
 }
