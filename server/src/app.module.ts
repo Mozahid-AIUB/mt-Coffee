@@ -7,6 +7,9 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { LunchModule } from './modules/lunch/lunch.module';
+import { SnacksModule } from './modules/snacks/snacks.module';
+import { PushModule } from './modules/push/push.module';
 
 @Module({
   imports: [
@@ -21,6 +24,9 @@ import { AuthModule } from './modules/auth/auth.module';
     ]),
     DatabaseModule,
     AuthModule,
+    LunchModule,
+    SnacksModule,
+    PushModule,
   ],
   controllers: [AppController],
   providers: [
