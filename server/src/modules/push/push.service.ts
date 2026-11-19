@@ -1,13 +1,17 @@
 
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { UserRole } from '@prisma/client';
 import webPush from 'web-push';
 import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
 export class PushService {
   private readonly publicKey: string;
-
+  private readonly logger = new Logger(PushService.name);
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
@@ -92,4 +96,71 @@ async saveSubscription(
     };
   }
   
+async notifyAdmins(notification: {
+  title: string;
+  body: string;
+  data?: Record<string, string>;
+}) {
+  const subscriptions =
+    await this.prisma.pushSubscription.findMany({
+      where: {
+        user: {
+          is: {
+            role: UserRole.ADMIN,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+  let sentCount = 0;
+  let removedCount = 0;
+  let failedCount = 0;
+
+  await Promise.all(
+    subscriptions.map(async (subscription) => {
+      try {
+        await webPush.sendNotification(
+          {
+            endpoint: subscription.endpoint,
+            keys: {
+              p256dh: subscription.p256dh,
+              auth: subscription.auth,
+            },
+          },
+          JSON.stringify(notification),
+        );
+
+        sentCount++;
+      } catch (error: unknown) {
+        const statusCode = (
+          error as { statusCode?: number }
+        ).statusCode;
+
+        if (statusCode === 404 || statusCode === 410) {
+          await this.prisma.pushSubscription.deleteMany({
+            where: {
+              id: subscription.id,
+            },
+          });
+
+          removedCount++;
+        } else {
+          failedCount++;
+
+          this.logger.error(
+            `Push notification failed for subscription ${subscription.id}.`,
+          );
+        }
+      }
+    }),
+  );
+
+  return {
+    sentCount,
+    removedCount,
+    failedCount,
+  };
+}
+
 }

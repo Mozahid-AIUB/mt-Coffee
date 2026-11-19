@@ -6,14 +6,17 @@ import {
   } from '@nestjs/common';
   
   import { PrismaService } from '../../database/prisma.service';
-  
+  import { PushService } from '../push/push.service';
   import { CreateSnackItemDto } from './dto/create-sncak-item.dto';
   import { UpdateSnackItemDto } from './dto/update-snack-item.dto';
   import { CreateOrderDto } from './dto/create-order.dto';
   import { UpdateSnackOrderStatusDto } from './dto/update-snack-order-status.dto';
   @Injectable()
   export class SnacksService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+      private readonly prisma: PrismaService,
+      private readonly pushService: PushService,
+    ) {}
   
     async createSnackItem(dto: CreateSnackItemDto) {
       const name = dto.name.trim();
@@ -214,11 +217,42 @@ async createSnackOrder(
       },
     });
   
-    return {
-      success: true,
-      message: 'Snack order placed successfully.',
-      data: snackOrder,
-    };
+    
+      // Notify all active administrators about the new order.
+      try {
+        const notificationResult =
+          await this.pushService.notifyAdmins({
+            title: 'New Snack Order',
+            body: `${snackOrder.quantity} x ${snackOrder.itemName} - ${snackOrder.location}`,
+            data: {
+              orderId: snackOrder.id,
+            },
+          });
+
+        // Mark the order as notified if at least one
+        // administrator received the push notification.
+        if (notificationResult.sentCount > 0) {
+          await this.prisma.snackOrder.update({
+            where: {
+              id: snackOrder.id,
+            },
+            data: {
+              notified: true,
+            },
+          });
+
+          snackOrder.notified = true;
+        }
+      } catch {
+        // Notification failure must not affect order placement.
+      }
+
+      return {
+        success: true,
+        message: 'Snack order placed successfully.',
+        data: snackOrder,
+      };
+
   }
    
 async getMySnackOrders(userId: string) {
