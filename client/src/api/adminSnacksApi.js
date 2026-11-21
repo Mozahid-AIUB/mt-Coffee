@@ -1,40 +1,31 @@
-// ======================================================================
-// নকল (mock) API — Admin Snack Orders।
-//   getAdminOrders()    -> GET   /api/admin/snacks/orders?status=&date=
-//   updateOrderStatus() -> PATCH /api/admin/snacks/orders/:id/status
-// ======================================================================
-import { readOrders, saveOrders } from "./mockSnacks";
+import api from "./axios";
 
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+export async function getItems() {
+  const res = await api.get("/admin/snacks/items");
+  return res.data.data;
+}
 
-export async function getAdminOrders({ status, date } = {}) {
-  await delay(300);
-  let orders = readOrders();
+export async function createItem(data) {
+  const res = await api.post("/admin/snacks/items", data);
+  return res.data;
+}
 
-  // নকল employee info যোগ করি
-  orders = orders.map((o) => ({
-    ...o,
-    employee: {
-      fullName: "Mozahid Islam",
-      employeeId: "MT-001",
-    },
-  }));
+export async function updateItem(id, data) {
+  const res = await api.patch(`/admin/snacks/items/${id}`, data);
+  return res.data;
+}
 
-  if (status && status !== "all") {
-    orders = orders.filter((o) => o.status === status);
-  }
-  if (date) {
-    orders = orders.filter((o) => o.createdAt.slice(0, 10) === date);
-  }
-  return orders;
+export async function toggleAvailability(id, isAvailable) {
+  const res = await api.patch(`/admin/snacks/items/${id}/availability`, { isAvailable });
+  return res.data;
+}
+
+export async function getAdminOrders() {
+  const res = await api.get("/admin/snacks/orders");
+  return res.data.data;
 }
 
 export async function updateOrderStatus(orderId, status) {
-  await delay(400);
-  const all = readOrders();
-  const order = all.find((o) => o.id === orderId);
-  if (!order) throw new Error("Order not found");
-  order.status = status;
-  saveOrders(all);
-  return order;
+  const res = await api.patch(`/admin/snacks/orders/${orderId}/status`, { status });
+  return res.data;
 }

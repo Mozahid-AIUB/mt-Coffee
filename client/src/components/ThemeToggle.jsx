@@ -8,7 +8,7 @@ function getInitialTheme() {
   } catch {
     /* storage বন্ধ থাকলে ignore */
   }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "light";
 }
 
 export default function ThemeToggle() {

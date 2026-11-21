@@ -7,7 +7,10 @@ import FormInput from "../components/FormInput";
 import Button from "../components/Button";
 import PasswordStrength from "../components/PasswordStrength";
 import { registerSchema, COMPANY_DOMAIN } from "../utils/validators";
-import { popupSuccess } from "../utils/popup";
+
+import { popupSuccess, popupQuick } from "../utils/popup";
+import api from "../api/axios";
+
 
 export default function Register() {
   const navigate = useNavigate();
@@ -21,14 +24,21 @@ export default function Register() {
   const password = watch("password");
 
   const onSubmit = async (data) => {
-    // এখন শুধু নকল অপেক্ষা। পরে এখানে NestJS register API বসবে।
-    await new Promise((r) => setTimeout(r, 900));
-    console.log("register data:", data);
-    await popupSuccess("Registration complete", "You can now log in.");
-    navigate("/login");
-  };
+  await api.post("/auth/register", {
+    fullName: data.fullName,
+    employeeId: data.employeeId,
+    phone: data.phone,
+    email: data.email,
+    password: data.password,
+  });
+  await popupQuick("Registration successful! Please login.");
+  navigate("/login");
+};
+
+
 
   return (
+    
     <AuthShell title="Create account" subtitle="Join Manush Tech Lunch & Snacks">
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         <FormInput
