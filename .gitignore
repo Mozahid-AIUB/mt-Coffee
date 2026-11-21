@@ -1,4 +1,9 @@
-﻿node_modules/
+node_modules/
 dist/
 .env
+<<<<<<< HEAD
 *.zip
+=======
+*.tsbuildinfo
+server/prisma/schema.backup.prisma
+>>>>>>> feature/backend-setup
