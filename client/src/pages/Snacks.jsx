@@ -60,13 +60,25 @@ function QuantityControl({ qty, setQty, disabled }) {
   );
 }
 
+function normalizeOptions(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  return Object.entries(raw).map(([key, choices]) => ({
+    key,
+    label: key.charAt(0).toUpperCase() + key.slice(1),
+    choices,
+    default: choices[0],
+  }));
+}
+
 // একটা Snack Item কার্ড (Tea / Coffee)
 function ItemCard({ item, isOpen, onOrder }) {
   const Icon = ITEM_ICONS[item.id] || Coffee;
+  const options = normalizeOptions(item.options);
   const [expanded, setExpanded] = useState(false);
   const [opts, setOpts] = useState(() => {
     const d = {};
-    item.options.forEach((o) => {
+    options.forEach((o) => {
       d[o.key] = o.default;
     });
     return d;
@@ -120,7 +132,7 @@ function ItemCard({ item, isOpen, onOrder }) {
         <div className="flex-1">
           <h3 className="font-semibold">{item.name}</h3>
           <p className="text-xs text-muted">
-            {item.options.map((o) => o.choices.join(", ")).join(" · ")}
+            {options.map((o) => o.choices.join(", ")).join(" · ")}
           </p>
         </div>
         <motion.span
@@ -142,7 +154,7 @@ function ItemCard({ item, isOpen, onOrder }) {
           >
             <div className="space-y-4 border-t border-border px-5 pb-5 pt-4">
               {/* Options */}
-              {item.options.map((o) => (
+              {options.map((o) => (
                 <OptionPicker
                   key={o.key}
                   opt={o}
