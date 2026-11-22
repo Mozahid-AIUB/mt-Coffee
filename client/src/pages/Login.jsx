@@ -17,6 +17,7 @@ export default function Login() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(loginSchema) });
 
@@ -24,15 +25,32 @@ export default function Login() {
   if (user) return <Navigate to={homePathFor(user)} replace />;
 
   const onSubmit = async (data) => {
-  const res = await api.post("/auth/login", data);
-  await popupQuick("Login successful");
-  login(res.data.data.user, res.data.data.accessToken);
-};
+    try {
+      const res = await api.post("/auth/login", data);
+      await popupQuick("Login successful");
+      login(res.data.data.user, res.data.data.accessToken);
+    } catch (e) {
+      const status = e.response?.status;
+      const msg = e.response?.data?.message;
+      if (status === 429) {
+        setError("root", { message: "Too many attempts. Please wait a minute and try again." });
+      } else if (status === 401) {
+        setError("root", { message: msg || "Invalid email or password." });
+      } else {
+        setError("root", { message: msg || "Something went wrong. Please try again." });
+      }
+    }
+  };
 
 
   return (
     <AuthShell title="Welcome back" subtitle="Log in with your company email">
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+        {errors.root && (
+          <p className="rounded-xl bg-danger/10 px-4 py-2.5 text-sm font-medium text-danger">
+            {errors.root.message}
+          </p>
+        )}
         <FormInput
           label="Email"
           type="email"
