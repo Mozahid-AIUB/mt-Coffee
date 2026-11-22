@@ -12,7 +12,13 @@ export async function createMenu(date, dishes) {
 
 export async function getReport(date) {
   const res = await api.get("/admin/lunch/report", { params: { date } });
-  return res.data.data;
+  const raw = res.data.data;
+  if (!raw) return null;
+  return {
+    ...raw,
+    total: raw.totalSelections,
+    perDish: Object.entries(raw.dishCounts).map(([name, count]) => ({ name, count })),
+  };
 }
 
 export async function exportCSV(date) {

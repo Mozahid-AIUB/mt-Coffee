@@ -38,7 +38,7 @@ function OrderCard({ order, onStatusChange }) {
     if (action.confirm) {
       const ok = await popupConfirm(
         "Cancel this order?",
-        `${order.itemName} × ${order.quantity} — ${order.employee.fullName}`,
+        `${order.itemName} × ${order.quantity} — ${order.user.fullName}`,
         "Yes, cancel"
       );
       if (!ok) return;
@@ -73,8 +73,8 @@ function OrderCard({ order, onStatusChange }) {
             {order.note && ` · "${order.note}"`}
           </p>
           <p className="mt-1 text-xs text-muted">
-            <span className="font-medium text-fg">{order.employee.fullName}</span>
-            {" "}({order.employee.employeeId}) · {time}
+            <span className="font-medium text-fg">{order.user.fullName}</span>
+            {" "}({order.user.employeeId}) · {time}
           </p>
         </div>
       </div>

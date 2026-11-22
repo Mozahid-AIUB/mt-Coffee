@@ -31,8 +31,8 @@ export function SnackOrderProvider({ children }) {
   const refresh = useCallback(async () => {
     if (!isAdmin) return;
     try {
-      const orders = await getAdminOrders({ status: "pending" });
-      const count = orders.length;
+      const orders = await getAdminOrders();
+      const count = orders.filter((o) => o.status === "PENDING").length;
       // নতুন pending order আসলে beep বাজাও
       if (count > prevCountRef.current && prevCountRef.current >= 0) {
         playBeep();
