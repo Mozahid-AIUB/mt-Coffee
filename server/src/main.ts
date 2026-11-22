@@ -9,12 +9,6 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.use(helmet());
-
-  app.use(cookieParser());
-
-  app.setGlobalPrefix('api');
-
   const frontendUrl = process.env.FRONTEND_URL;
 
   if (!frontendUrl) {
@@ -22,9 +16,29 @@ async function bootstrap() {
   }
 
   app.enableCors({
-    origin: frontendUrl,
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        origin === frontendUrl ||
+        /^http:\/\/localhost:\d+$/.test(origin)
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
+
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }));
+
+  app.use(cookieParser());
+
+  app.setGlobalPrefix('api');
 
  
 app.useGlobalPipes(

@@ -37,7 +37,7 @@ export default function Login() {
           label="Email"
           type="email"
           icon={Mail}
-          placeholder="you@manushtech.com"
+          placeholder="you@manush.tech"
           autoComplete="email"
           error={errors.email?.message}
           {...register("email")}
