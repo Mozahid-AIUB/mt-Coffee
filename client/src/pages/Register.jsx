@@ -18,22 +18,35 @@ export default function Register() {
     register,
     handleSubmit,
     watch,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(registerSchema) });
 
   const password = watch("password");
 
   const onSubmit = async (data) => {
-  await api.post("/auth/register", {
-    fullName: data.fullName,
-    employeeId: data.employeeId,
-    phone: data.phone,
-    email: data.email,
-    password: data.password,
-  });
-  await popupQuick("Registration successful! Please login.");
-  navigate("/login");
-};
+    try {
+      await api.post("/auth/register", {
+        fullName: data.fullName,
+        employeeId: data.employeeId,
+        phone: data.phone,
+        email: data.email,
+        password: data.password,
+      });
+      await popupSuccess("Registration successful!", "You can now login with your credentials.");
+      navigate("/login");
+    } catch (e) {
+      const status = e.response?.status;
+      const msg = e.response?.data?.message;
+      if (status === 429) {
+        setError("root", { message: "Too many attempts. Please wait a minute and try again." });
+      } else if (status === 409) {
+        setError("root", { message: msg || "An account with this email, employee ID, or phone already exists." });
+      } else {
+        setError("root", { message: msg || "Something went wrong. Please try again." });
+      }
+    }
+  };
 
 
 
@@ -41,6 +54,11 @@ export default function Register() {
     
     <AuthShell title="Create account" subtitle="Join Manush Tech Lunch & Snacks">
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+        {errors.root && (
+          <p className="rounded-xl bg-danger/10 px-4 py-2.5 text-sm font-medium text-danger">
+            {errors.root.message}
+          </p>
+        )}
         <FormInput
           label="Full Name"
           icon={User}
