@@ -14,13 +14,15 @@ const labels = {
 };
 
 export default function StatusBadge({ status }) {
+  const key = String(status || "").toLowerCase();
+
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-        styles[status] || "bg-surface-2 text-muted"
+        styles[key] || "bg-surface-2 text-muted"
       }`}
     >
-      {labels[status] || status}
+      {labels[key] || status}
     </span>
   );
 }
