@@ -23,8 +23,24 @@ import {
   
     async login(loginDto: LoginDto) {
       const { email, password } = loginDto;
-  
-      // 1. Find the employee by email.
+
+      // 1. Only company email addresses may sign in.
+      const companyDomain = this.configService
+        .get<string>('COMPANY_EMAIL_DOMAIN')
+        ?.trim()
+        .toLowerCase();
+
+      if (!companyDomain) {
+        throw new InternalServerErrorException(
+          'Company email domain is not configured.',
+        );
+      }
+
+      if (!email.toLowerCase().endsWith(`@${companyDomain}`)) {
+        throw new UnauthorizedException('Invalid email or password.');
+      }
+
+      // 2. Find the employee by email.
       const user = await this.prisma.user.findUnique({
         where: { email },
       });
@@ -33,7 +49,7 @@ import {
         throw new UnauthorizedException('Invalid email or password.');
       }
   
-      // 2. Verify the password.
+      // 3. Verify the password.
       const isPasswordValid = await bcrypt.compare(
         password,
         user.password,
@@ -43,14 +59,14 @@ import {
         throw new UnauthorizedException('Invalid email or password.');
       }
   
-      // 3. Check whether the account is active.
+      // 4. Check whether the account is active.
       if (!user.isActive) {
         throw new ForbiddenException(
           'Your account is inactive. Please contact the administrator.',
         );
       }
   
-      // 4. Read JWT configuration.
+      // 5. Read JWT configuration.
       const accessSecret = this.configService.getOrThrow<string>(
         'JWT_ACCESS_SECRET',
       );
@@ -67,7 +83,7 @@ import {
         'JWT_REFRESH_EXPIRES_IN',
       );
   
-      // 5. Generate the access token.
+      // 6. Generate the access token.
       const accessToken = await this.jwtService.signAsync(
         {
           sub: user.id,
@@ -80,7 +96,7 @@ import {
         },
       );
   
-      // 6. Generate the refresh token.
+      // 7. Generate the refresh token.
       const refreshToken = await this.jwtService.signAsync(
         {
           sub: user.id,
@@ -93,15 +109,15 @@ import {
         },
       );
   
-      // 7. Convert the refresh token into a SHA-256 hash.
+      // 8. Convert the refresh token into a SHA-256 hash.
       const tokenHash = createHash('sha256')
         .update(refreshToken)
         .digest('hex');
   
-      // 8. Calculate refresh token expiration.
+      // 9. Calculate refresh token expiration.
       const expiresAt = this.getExpirationDate(refreshExpiresIn);
   
-      // 9. Store the hashed refresh token in PostgreSQL.
+      // 10. Store the hashed refresh token in PostgreSQL.
       await this.prisma.refreshToken.create({
         data: {
           userId: user.id,
@@ -110,7 +126,7 @@ import {
         },
       });
   
-      // 10. Return authentication information.
+      // 11. Return authentication information.
       return {
         success: true,
         message: 'Login successful.',
