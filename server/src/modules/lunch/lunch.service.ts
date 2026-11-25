@@ -7,12 +7,17 @@ import {
   } from '@nestjs/common';
 
   import { PrismaService } from '../../database/prisma.service';
+  import { PushService } from '../push/push.service';
   import { CreateMenuDto } from './dto/create-menu.dto';
+  import { UpdateMenuDto } from './dto/update-menu.dto';
   import { CheckinDto } from './dto/checkin.dto';
 
   @Injectable()
   export class LunchService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+      private readonly prisma: PrismaService,
+      private readonly pushService: PushService,
+    ) {}
 
     async createMenu(
       createMenuDto: CreateMenuDto,
@@ -78,6 +83,23 @@ import {
           },
         });
 
+        // Let every employee know the menu is out.
+        try {
+          const dishNames = menu.dishes
+            .map((dish) => dish.name)
+            .join(', ');
+
+          await this.pushService.notifyEmployees({
+            title: `Lunch Menu for ${date}`,
+            body: dishNames,
+            data: {
+              date,
+            },
+          });
+        } catch {
+          // Notification failure must not affect menu creation.
+        }
+
         return {
           success: true,
           message: 'Lunch menu created successfully.',
@@ -98,6 +120,95 @@ import {
         throw error;
       }
     }
+    async updateMenu(
+      menuId: string,
+      updateMenuDto: UpdateMenuDto,
+    ) {
+      const menu = await this.prisma.lunchMenu.findUnique({
+        where: { id: menuId },
+        include: {
+          _count: {
+            select: { checkins: true },
+          },
+        },
+      });
+
+      if (!menu) {
+        throw new NotFoundException('Lunch menu not found.');
+      }
+
+      if (menu._count.checkins > 0) {
+        throw new BadRequestException(
+          'This menu cannot be changed because employees have already checked in.',
+        );
+      }
+
+      // Replace the dishes in one transaction so a failure leaves nothing behind.
+      const updatedMenu = await this.prisma.$transaction(async (transaction) => {
+        await transaction.lunchDish.deleteMany({
+          where: { menuId },
+        });
+
+        return transaction.lunchMenu.update({
+          where: { id: menuId },
+          data: {
+            dishes: {
+              create: updateMenuDto.dishes.map((dish) => ({
+                name: dish.name.trim(),
+                description: dish.description?.trim() || null,
+              })),
+            },
+          },
+          include: {
+            dishes: true,
+          },
+        });
+      });
+
+      return {
+        success: true,
+        message: 'Lunch menu updated successfully.',
+        data: updatedMenu,
+      };
+    }
+
+    async deleteMenu(menuId: string) {
+      const menu = await this.prisma.lunchMenu.findUnique({
+        where: { id: menuId },
+        include: {
+          _count: {
+            select: { checkins: true },
+          },
+        },
+      });
+
+      if (!menu) {
+        throw new NotFoundException('Lunch menu not found.');
+      }
+
+      if (menu._count.checkins > 0) {
+        throw new BadRequestException(
+          'This menu cannot be deleted because employees have already checked in.',
+        );
+      }
+
+      // Dishes use onDelete: Restrict, so they must go first.
+      await this.prisma.$transaction([
+        this.prisma.lunchDish.deleteMany({
+          where: { menuId },
+        }),
+        this.prisma.lunchMenu.delete({
+          where: { id: menuId },
+        }),
+      ]);
+
+      return {
+        success: true,
+        message: 'Lunch menu deleted successfully.',
+        data: { id: menuId },
+      };
+    }
+
     async getNextLunchMenu() {
         // Get today's date in Bangladesh time.
         const dhakaDate = new Intl.DateTimeFormat('en-CA', {

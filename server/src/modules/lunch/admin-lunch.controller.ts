@@ -2,7 +2,11 @@
 import {
     Body,
     Controller,
+    Delete,
     Get,
+    Param,
+    ParseUUIDPipe,
+    Patch,
     Post,
     Query,
     Req,
@@ -14,6 +18,7 @@ import {
   import { Roles } from '../auth/decorators/roles.decorator';
   import { LunchService } from './lunch.service';
   import { CreateMenuDto } from './dto/create-menu.dto';
+  import { UpdateMenuDto } from './dto/update-menu.dto';
   interface AuthenticatedRequest extends Request {
     user: {
       id: string;
@@ -38,6 +43,21 @@ import {
         request.user.id,
       );
     }
+    @Patch('menu/:id')
+    async updateMenu(
+      @Param('id', ParseUUIDPipe) menuId: string,
+      @Body() updateMenuDto: UpdateMenuDto,
+    ) {
+      return this.lunchService.updateMenu(menuId, updateMenuDto);
+    }
+
+    @Delete('menu/:id')
+    async deleteMenu(
+      @Param('id', ParseUUIDPipe) menuId: string,
+    ) {
+      return this.lunchService.deleteMenu(menuId);
+    }
+
     @Get('report')
 async getDailyLunchReport(
   @Query('date') date: string,

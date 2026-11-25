@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2, Save, Edit3, X, Calendar, ChefHat } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { getMenus, createMenu, updateMenu, deleteMenu } from "../api/adminLunchApi";
-import { weekDates, dayNameOf, formatDate, cutoffMs, formatCountdown } from "../utils/dhaka";
+import { weekDates, dayNameOf, formatDate, toYmd, cutoffMs, formatCountdown } from "../utils/dhaka";
 import { useNow } from "../hooks/useNow";
 import { popupConfirm, popupError, popupQuick, popupSuccess } from "../utils/popup";
 
@@ -46,7 +46,7 @@ function DishRow({ dish, index, onChange, onRemove, disabled }) {
 
 // ========== Menu Form (create / edit) ==========
 function MenuForm({ editMenu, onSave, onCancel }) {
-  const [date, setDate] = useState(editMenu?.date || "");
+  const [date, setDate] = useState(toYmd(editMenu?.date) || "");
   const [dishes, setDishes] = useState(
     editMenu?.dishes?.map((d) => ({ ...d, _errName: "" })) || [
       { id: "", name: "", description: "", _errName: "" },
@@ -105,10 +105,10 @@ function MenuForm({ editMenu, onSave, onCancel }) {
     if (!validate()) return;
     setBusy(true);
     try {
+      // ব্যাকএন্ড শুধু name/description নেয়, তাই id বাদ
       const cleanDishes = dishes.map((d) => ({
-        id: d.id || undefined,
         name: d.name.trim(),
-        description: (d.description || "").trim(),
+        description: (d.description || "").trim() || undefined,
       }));
       if (isEdit) {
         await onSave(editMenu.id, cleanDishes);
@@ -131,7 +131,7 @@ function MenuForm({ editMenu, onSave, onCancel }) {
       className="rounded-3xl border border-accent/40 bg-surface p-5 shadow-card"
     >
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-semibold">{isEdit ? `Edit: ${editMenu.dayName}, ${formatDate(editMenu.date)}` : "New Menu"}</h3>
+        <h3 className="font-semibold">{isEdit ? `Edit: ${dayNameOf(editMenu.date)}, ${formatDate(editMenu.date)}` : "New Menu"}</h3>
         {onCancel && (
           <button type="button" onClick={onCancel} className="grid size-8 place-items-center rounded-xl text-muted hover:bg-surface-2">
             <X className="size-4" />
@@ -203,7 +203,7 @@ function MenuCard({ menu, now, onEdit, onDelete }) {
       "Delete this menu?",
       totalCheckins > 0
         ? `${totalCheckins} employee(s) already checked in — their choices will be lost.`
-        : `${menu.dayName}, ${formatDate(menu.date)}`,
+        : `${dayNameOf(menu.date)}, ${formatDate(menu.date)}`,
       "Yes, delete"
     );
     if (!ok) return;
@@ -222,7 +222,7 @@ function MenuCard({ menu, now, onEdit, onDelete }) {
     <article className="rounded-3xl border border-border bg-surface p-5 shadow-card">
       <header className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-semibold">{menu.dayName}</h3>
+          <h3 className="font-semibold">{dayNameOf(menu.date)}</h3>
           <p className="text-sm text-muted">{formatDate(menu.date)}</p>
         </div>
         <div className="flex items-center gap-1.5 text-xs">

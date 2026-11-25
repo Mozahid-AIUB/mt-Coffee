@@ -31,9 +31,11 @@ export async function exportCSV(date) {
   return [header, ...rows].join("\n");
 }
 export async function updateMenu(menuId, dishes) {
-  throw new Error("Update menu is not available yet");
+  const res = await api.patch(`/admin/lunch/menu/${menuId}`, { dishes });
+  return res.data;
 }
 
 export async function deleteMenu(menuId) {
-  throw new Error("Delete menu is not available yet");
+  const res = await api.delete(`/admin/lunch/menu/${menuId}`);
+  return res.data;
 }

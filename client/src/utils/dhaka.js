@@ -5,6 +5,9 @@ const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
 // "YYYY-MM-DD" বানায় (shift করা তারিখ থেকে)
 const ymd = (d) => d.toISOString().slice(0, 10);
 
+// ব্যাকএন্ড কখনো "2026-11-26" পাঠায়, কখনো পুরো ISO timestamp — দুটোই সামলাই
+export const toYmd = (date) => String(date ?? "").slice(0, 10);
+
 export const todayYmd = (now = Date.now()) => ymd(new Date(now + OFFSET));
 
 // এই সপ্তাহের রবি থেকে বৃহস্পতি। শুক্র/শনিবারে আসছে সপ্তাহ দেখায়।
@@ -21,7 +24,7 @@ export function weekDates(now = Date.now()) {
   });
 }
 
-export const dayNameOf = (date) => DAY_NAMES[new Date(date + "T00:00:00Z").getUTCDay()];
+export const dayNameOf = (date) => DAY_NAMES[new Date(toYmd(date) + "T00:00:00Z").getUTCDay()];
 
 // লাঞ্চের আগের দিন রাত ১০টা (ঢাকা) = check-in বন্ধের সময়
 export function cutoffMs(date) {
@@ -31,7 +34,7 @@ export function cutoffMs(date) {
 }
 
 export const formatDate = (date) =>
-  new Date(date + "T00:00:00Z").toLocaleDateString("en-GB", {
+  new Date(toYmd(date) + "T00:00:00Z").toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
