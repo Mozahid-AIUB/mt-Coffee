@@ -3,6 +3,8 @@ import { Coffee, Filter, Calendar, RefreshCw, Bell, BellOff } from "lucide-react
 import { motion, AnimatePresence } from "motion/react";
 import { getAdminOrders, updateOrderStatus } from "../api/adminSnacksApi";
 import { useSnackOrders } from "../context/SnackOrderContext";
+import { isPushOptedOut, setPushOptOut } from "../utils/pushPrefs";
+import { todayYmd } from "../utils/dhaka";
 import { popupConfirm, popupError } from "../utils/popup";
 import StatusBadge from "../components/StatusBadge";
 import { ToastContainer } from "../components/Toast";
@@ -22,9 +24,15 @@ const STATUS_ACTIONS = {
   cancelled: [],
 };
 
+// "Test User" → "TU"
+function initialsOf(name = "") {
+  const parts = name.trim().split(/\s+/);
+  return (parts[0]?.[0] || "?") + (parts.length > 1 ? parts[parts.length - 1][0] : "");
+}
+
 function OrderCard({ order, onStatusChange }) {
   const [busy, setBusy] = useState(false);
-  const actions = STATUS_ACTIONS[order.status] || [];
+  const actions = STATUS_ACTIONS[String(order.status).toLowerCase()] || [];
 
   const time = new Date(order.createdAt).toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -61,20 +69,25 @@ function OrderCard({ order, onStatusChange }) {
       exit={{ opacity: 0, scale: 0.95 }}
       className="rounded-2xl border border-border bg-surface p-4 shadow-card"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-accent/15 text-sm font-bold text-accent">
+          {initialsOf(order.user.fullName)}
+        </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm">{order.itemName}</span>
-            <span className="text-xs text-muted">× {order.quantity}</span>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="font-semibold">{order.user.fullName}</span>
+            <span className="text-xs text-muted">{order.user.employeeId}</span>
+            <span className="text-xs text-muted">· {time}</span>
+          </div>
+          <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium">
+              {order.itemName} <span className="text-muted">× {order.quantity}</span>
+            </span>
             <StatusBadge status={order.status} />
           </div>
           <p className="mt-1 text-xs text-muted">
             {optText}{optText && " · "}{order.location}
             {order.note && ` · "${order.note}"`}
-          </p>
-          <p className="mt-1 text-xs text-muted">
-            <span className="font-medium text-fg">{order.user.fullName}</span>
-            {" "}({order.user.employeeId}) · {time}
           </p>
         </div>
       </div>
@@ -172,11 +185,15 @@ export default function AdminSnacks() {
   const { refresh: refreshBadge } = useSnackOrders();
   const toastIdRef = useRef(0);
 
-  // পুশ নোটিফিকেশন state
+  // পুশ নোটিফিকেশন state — admin-এর জন্য নিজে থেকেই চালু হয়
   const [pushState, setPushState] = useState("loading"); // loading | unsupported | off | on | denied
   useEffect(() => {
     if (!isPushSupported()) { setPushState("unsupported"); return; }
     if (getPermission() === "denied") { setPushState("denied"); return; }
+
+    // subscribe করার কাজটা SnackOrderContext লগইনেই সেরে রাখে,
+    // এখানে শুধু বর্তমান অবস্থাটা দেখাই
+    if (isPushOptedOut()) { setPushState("off"); return; }
     getSubscription()
       .then((sub) => setPushState(sub ? "on" : "off"))
       .catch(() => setPushState("off"));
@@ -185,11 +202,13 @@ export default function AdminSnacks() {
   const handlePushToggle = async () => {
     if (pushState === "on") {
       await unsubscribe();
+      setPushOptOut(true);
       setPushState("off");
       addToast("Notifications disabled");
     } else {
       try {
         await subscribe();
+        setPushOptOut(false);
         setPushState("on");
         addToast("Notifications enabled!");
         sendTestNotification();
@@ -207,13 +226,13 @@ export default function AdminSnacks() {
 
   const load = useCallback(async () => {
     try {
-      const list = await getAdminOrders({ status: status === "all" ? undefined : status, date: date || undefined });
+      const list = await getAdminOrders();
       setOrders(list);
       setError("");
     } catch {
       setError("Could not load orders. Please try again.");
     }
-  }, [status, date]);
+  }, []);
 
   useEffect(() => {
     load();
@@ -226,14 +245,20 @@ export default function AdminSnacks() {
   }, [load]);
 
   const handleStatusChange = async (orderId, newStatus) => {
-    await updateOrderStatus(orderId, newStatus);
+    await updateOrderStatus(orderId, newStatus.toUpperCase());
     addToast(`Order marked as ${newStatus}`);
     await load();
     refreshBadge();
   };
 
-  const orderCount = orders?.length || 0;
-  const pendingCount = orders?.filter((o) => o.status === "pending").length || 0;
+  const visible = (orders || []).filter((o) => {
+    if (status !== "all" && o.status.toLowerCase() !== status) return false;
+    if (date && todayYmd(Date.parse(o.createdAt)) !== date) return false;
+    return true;
+  });
+
+  const orderCount = visible.length;
+  const pendingCount = orders?.filter((o) => o.status === "PENDING").length || 0;
 
   return (
     <div>
@@ -313,7 +338,7 @@ export default function AdminSnacks() {
         ) : (
           <AnimatePresence mode="popLayout">
             <div className="space-y-3">
-              {orders.map((o) => (
+              {visible.map((o) => (
                 <OrderCard key={o.id} order={o} onStatusChange={handleStatusChange} />
               ))}
             </div>
