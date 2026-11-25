@@ -2,7 +2,7 @@ import Swal from "sweetalert2";
 
 const BRAND = "#b5651d";
 
-// dark mode চালু থাকলে popup-ও dark হবে
+// Match the popup to the active theme
 const themed = () =>
   document.documentElement.dataset.theme === "dark"
     ? { background: "#1f1812", color: "#f4ebe1" }
@@ -11,7 +11,7 @@ const themed = () =>
 export const popupSuccess = (title, text) =>
   Swal.fire({ icon: "success", title, text, confirmButtonColor: BRAND, ...themed() });
 
-// নিজে নিজে বন্ধ হয়ে যাওয়া ছোট popup
+// Small popup that closes itself
 export const popupQuick = (title) =>
   Swal.fire({
     icon: "success",

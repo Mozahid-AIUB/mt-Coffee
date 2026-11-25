@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-// Login না করলে Login পেজে ফেরত পাঠায়
+// Sends signed-out visitors back to the login page
 export default function ProtectedRoute() {
   const { user } = useAuth();
   const location = useLocation();

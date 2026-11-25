@@ -4,7 +4,7 @@ import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import { useSnackOrders } from "../context/SnackOrderContext";
 
-// Login এর পরের সব পেজের কাঠামো: ওপরে Navbar, পাশে Sidebar, মাঝে পেজ
+// Frame for every signed-in page: navbar on top, sidebar beside, page in the middle
 export default function AppLayout() {
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => setOpen((o) => !o), []);

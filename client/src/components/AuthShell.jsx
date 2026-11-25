@@ -5,7 +5,7 @@ import ThemeToggle from "./ThemeToggle";
 export default function AuthShell({ title, subtitle, children }) {
   return (
     <div className="relative min-h-dvh overflow-hidden">
-      {/* পেছনের নরম আলোর গোলক */}
+      {/* Soft glowing orbs in the background */}
       <div className="pointer-events-none absolute -left-24 -top-24 size-96 rounded-full bg-accent/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-32 -right-24 size-96 rounded-full bg-accent/15 blur-3xl" />
 

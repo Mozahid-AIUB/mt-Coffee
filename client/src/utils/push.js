@@ -1,7 +1,7 @@
 // ======================================================================
-// পুশ নোটিফিকেশন ইউটিলিটি।
-// ব্যাকএন্ড থেকে VAPID public key নিয়ে subscribe/unsubscribe করে।
-// লগআউট করলেও subscription থাকবে (spec মতে)।
+// Push notification helpers.
+// Fetches the VAPID public key from the API, then subscribes or unsubscribes.
+// The subscription survives logout, which is what the spec asks for.
 // ======================================================================
 
 import { getPublicKey, saveSubscription, removeSubscription } from "../api/pushApi";
@@ -15,34 +15,34 @@ function urlBase64ToUint8Array(base64String) {
   return arr;
 }
 
-// browser-এর PushSubscription-এ বাড়তি field থাকে, backend শুধু এই দুটো নেয়
+// A browser PushSubscription carries extra fields; the API accepts only these
 function toPayload(sub) {
   const { endpoint, keys } = sub.toJSON();
   return { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } };
 }
 
-// ব্রাউজার push সাপোর্ট করে কিনা
+// Whether this browser supports push
 export function isPushSupported() {
   return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
 
-// বর্তমান permission state
+// Current permission state
 export function getPermission() {
   if (!isPushSupported()) return "unsupported";
   return Notification.permission; // "default" | "granted" | "denied"
 }
 
-// service worker register করি
+// Register the service worker
 async function getSW() {
   return navigator.serviceWorker.register("/sw.js");
 }
 
-// বর্তমান subscription আছে কিনা
+// The current subscription, if there is one
 export async function getSubscription() {
   try {
-    // আগে sw register করি, তারপর ready wait করি
+    // Register the worker first, then wait for it to be ready
     await navigator.serviceWorker.register("/sw.js");
-    // ready হওয়ার জন্য wait — কিন্তু ৩ সেকেন্ডের বেশি না
+    // Wait for ready, but no longer than 3 seconds
     const ready = await Promise.race([
       navigator.serviceWorker.ready,
       new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3000)),
@@ -53,7 +53,7 @@ export async function getSubscription() {
   }
 }
 
-// subscribe — permission চাইবে + subscription তৈরি করে ব্যাকএন্ডে পাঠাবে
+// Asks for permission, creates the subscription, and saves it to the API
 export async function subscribe() {
   await getSW();
   const reg = await navigator.serviceWorker.ready;
@@ -66,20 +66,20 @@ export async function subscribe() {
   return sub;
 }
 
-// unsubscribe — ব্যাকএন্ড থেকেও মুছে দেয়
+// Removes the subscription from the API as well as the browser
 export async function unsubscribe() {
   const sub = await getSubscription();
   if (!sub) return;
-  // আগে ব্যাকএন্ডে জানাই, নাহলে endpoint হারিয়ে যাবে
+  // Tell the API first, or the endpoint is lost before it can be deleted
   try {
     await removeSubscription(sub.endpoint);
   } catch {
-    // ব্যাকএন্ডে না থাকলেও ব্রাউজার থেকে সরিয়ে দিই
+    // Drop it from the browser even when the API does not have it
   }
   await sub.unsubscribe();
 }
 
-// টেস্ট notification — ব্রাউজারেই দেখায়, সার্ভার ছাড়া
+// Test notification, raised by the browser without involving the server
 export async function sendTestNotification() {
   const reg = await navigator.serviceWorker.ready;
   await reg.showNotification("Manush Tech", {

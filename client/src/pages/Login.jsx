@@ -21,7 +21,7 @@ export default function Login() {
     formState: { errors, isSubmitting },
   } = useForm({ resolver: zodResolver(loginSchema) });
 
-  // আগে থেকেই login করা থাকলে সরাসরি নিজের পেজে
+  // Already signed in: go straight to the user's landing page
   if (user) return <Navigate to={homePathFor(user)} replace />;
 
   const onSubmit = async (data) => {

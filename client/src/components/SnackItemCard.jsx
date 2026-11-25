@@ -3,12 +3,12 @@ import { Coffee, CupSoda, Send, Minus, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { popupError, popupQuick } from "../utils/popup";
 
-// আইটেমের নাম দেখে আইকন বাছাই (DB-র id হলো UUID, তাই নাম দিয়েই মেলাতে হয়)
+// Pick the icon from the item name, since the database id is a UUID
 function ItemIcon({ name = "", ...props }) {
   return /tea/i.test(name) ? <CupSoda {...props} /> : <Coffee {...props} />;
 }
 
-// একটা আইটেমের option বাছাই
+// Choice buttons for one option group
 function OptionPicker({ opt, value, onChange, disabled }) {
   return (
     <div>
@@ -59,7 +59,7 @@ function QuantityControl({ qty, setQty, disabled }) {
   );
 }
 
-// backend কখনো object আকারে options পাঠায় ({sugar: [...]}) — array-তে বদলে নিই
+// The API sometimes sends options as an object ({sugar: [...]}), so normalise to an array
 function normalizeOptions(raw) {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw;
@@ -71,7 +71,7 @@ function normalizeOptions(raw) {
   }));
 }
 
-// একটা Snack Item কার্ড (Tea / Coffee)
+// One snack item card (tea or coffee)
 export default function SnackItemCard({ item, isOpen, onOrder }) {
   const options = normalizeOptions(item.options);
   const [expanded, setExpanded] = useState(false);
@@ -104,7 +104,7 @@ export default function SnackItemCard({ item, isOpen, onOrder }) {
     try {
       await onOrder({ itemId: item.id, quantity: qty, options: opts, location: location.trim(), note: note.trim() });
       popupQuick(`${item.name} ordered!`);
-      // রিসেট
+      // Reset the form
       setQty(1);
       setLocation("");
       setNote("");

@@ -1,19 +1,19 @@
-// সব সময় ঢাকার সময় (UTC+6) ধরে হিসাব। বাংলাদেশে daylight saving নেই।
+// Every date here is Dhaka time (UTC+6). Bangladesh has no daylight saving.
 const OFFSET = 6 * 60 * 60 * 1000;
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-// "YYYY-MM-DD" বানায় (shift করা তারিখ থেকে)
+// Formats an already-shifted date as "YYYY-MM-DD"
 const ymd = (d) => d.toISOString().slice(0, 10);
 
-// ব্যাকএন্ড কখনো "2026-11-26" পাঠায়, কখনো পুরো ISO timestamp — দুটোই সামলাই
+// The API sends either "2026-11-26" or a full ISO timestamp, so accept both
 export const toYmd = (date) => String(date ?? "").slice(0, 10);
 
 export const todayYmd = (now = Date.now()) => ymd(new Date(now + OFFSET));
 
-// এই সপ্তাহের রবি থেকে বৃহস্পতি। শুক্র/শনিবারে আসছে সপ্তাহ দেখায়।
+// Sunday to Thursday of this week. On Friday and Saturday, shows the coming week.
 export function weekDates(now = Date.now()) {
   const t = new Date(now + OFFSET);
-  const dow = t.getUTCDay(); // 0 = রবিবার
+  const dow = t.getUTCDay(); // 0 = Sunday
   const start = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()));
   if (dow >= 5) start.setUTCDate(start.getUTCDate() + (7 - dow));
   else start.setUTCDate(start.getUTCDate() - dow);
@@ -26,7 +26,7 @@ export function weekDates(now = Date.now()) {
 
 export const dayNameOf = (date) => DAY_NAMES[new Date(toYmd(date) + "T00:00:00Z").getUTCDay()];
 
-// লাঞ্চের আগের দিন রাত ১০টা (ঢাকা) = check-in বন্ধের সময়
+// Check-in closes at 10pm Dhaka time the night before
 export function cutoffMs(date) {
   const prev = new Date(date + "T00:00:00Z");
   prev.setUTCDate(prev.getUTCDate() - 1);
@@ -40,14 +40,14 @@ export const formatDate = (date) =>
     timeZone: "UTC",
   });
 
-// স্ন্যাকস সার্ভিস চালু আছে কি না (সকাল ৮টা - রাত ৮টা ঢাকা সময়)
+// Whether snack service is open (8am to 8pm Dhaka time)
 export function snackServiceOpen(now = Date.now()) {
   const t = new Date(now + OFFSET);
   const h = t.getUTCHours();
   return h >= 8 && h < 20;
 }
 
-// পরের opening/closing সময় পর্যন্ত কত মিলিসেকেন্ড বাকি
+// Milliseconds until service next opens or closes
 export function nextSnackBoundary(now = Date.now()) {
   const t = new Date(now + OFFSET);
   const h = t.getUTCHours();
@@ -56,7 +56,7 @@ export function nextSnackBoundary(now = Date.now()) {
   const ms = t.getUTCMilliseconds();
   const currentMs = ((h * 60 + m) * 60 + s) * 1000 + ms;
   const isOpen = h >= 8 && h < 20;
-  // ৮টা = 8*3600*1000, রাত ৮টা = 20*3600*1000
+  // 8am = 8*3600*1000, 8pm = 20*3600*1000
   const targetMs = isOpen ? 20 * 3600000 : (h < 8 ? 8 * 3600000 : 24 * 3600000 + 8 * 3600000);
   return targetMs - currentMs;
 }

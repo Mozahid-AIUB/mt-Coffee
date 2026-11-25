@@ -121,7 +121,7 @@ export default function AdminEmployees() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // search debounce — টাইপ করার ৩০০ms পর API call
+  // Debounce the search: call the API 300ms after typing stops
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// কোম্পানির email domain। .env এ VITE_COMPANY_EMAIL_DOMAIN দিয়ে বদলানো যায়।
+// Company email domain. Override it with VITE_COMPANY_EMAIL_DOMAIN in .env.
 export const COMPANY_DOMAIN =
   (import.meta.env.VITE_COMPANY_EMAIL_DOMAIN || "manush.tech").toLowerCase();
 

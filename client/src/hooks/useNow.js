@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-// নির্দিষ্ট সময় পর পর "এখন কটা বাজে" আপডেট করে (countdown এর জন্য)
+// Re-renders on an interval so countdowns stay current
 export function useNow(intervalMs = 30000) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {

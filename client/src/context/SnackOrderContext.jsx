@@ -6,7 +6,7 @@ import { isPushOptedOut } from "../utils/pushPrefs";
 
 const SnackOrderContext = createContext(null);
 
-// নতুন অর্ডারের "beep" শব্দ — Web Audio API, কোনো ফাইল লাগে না
+// Beep for a new order, built with the Web Audio API so no sound file is needed
 function playBeep() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -21,7 +21,7 @@ function playBeep() {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
     osc.stop(ctx.currentTime + 0.3);
   } catch {
-    // audio না চললে চুপচাপ ignore
+    // Ignore when audio will not play
   }
 }
 
@@ -35,7 +35,7 @@ export function SnackOrderProvider({ children }) {
     try {
       const orders = await getAdminOrders();
       const count = orders.filter((o) => o.status === "PENDING").length;
-      // নতুন pending order আসলে beep বাজাও
+      // Beep when a new pending order arrives
       if (count > prevCountRef.current && prevCountRef.current >= 0) {
         playBeep();
       }
@@ -46,7 +46,7 @@ export function SnackOrderProvider({ children }) {
     }
   }, [isAdmin]);
 
-  // ১০ সেকেন্ড পর পর poll
+  // Poll every 10 seconds
   useEffect(() => {
     if (!isAdmin) return;
     refresh();
@@ -54,20 +54,20 @@ export function SnackOrderProvider({ children }) {
     return () => clearInterval(id);
   }, [isAdmin, refresh]);
 
-  // লগইন করলেই push চালু করে দিই — নিজে বন্ধ করে থাকলে ছাড়া।
-  // admin নতুন অর্ডারের খবর পায়, কর্মীরা নতুন আইটেমের খবর পায়।
-  // browser-এ subscription থাকলেও সার্ভারে নাও থাকতে পারে, তাই প্রতিবার
-  // subscribe() ডাকি — একই endpoint হলে ব্যাকএন্ড upsert করে নেয়।
+  // Subscribe to push on login, unless the user turned it off.
+  // Admins hear about new orders; employees hear about new menus.
+  // The browser can hold a subscription the server does not know about,
+  // so call subscribe() every time; the API upserts a repeated endpoint.
   const pushTriedRef = useRef(false);
   useEffect(() => {
     if (!user || !isPushSupported()) return;
     if (getPermission() === "denied") return;
     if (isPushOptedOut()) return;
-    if (pushTriedRef.current) return; // StrictMode-এ effect দুবার চলে
+    if (pushTriedRef.current) return; // StrictMode runs effects twice
     pushTriedRef.current = true;
     subscribe().catch(() => {
-      // token expire বা permission না পেলে পরের বার আবার চেষ্টা করতে দিই —
-      // admin চাইলে Snack Orders পেজের toggle থেকেও চালু করতে পারবে
+      // On an expired token or a refused permission, allow a later retry.
+      // The toggle on the Snack Orders page can turn it on as well.
       pushTriedRef.current = false;
     });
   }, [user]);

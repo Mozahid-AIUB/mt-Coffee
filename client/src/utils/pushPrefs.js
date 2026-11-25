@@ -1,4 +1,4 @@
-// admin নিজে notification বন্ধ করলে সেটা মনে রাখি, নাহলে প্রতিবার আবার চালু হবে
+// Remember when an admin turns notifications off, so login does not turn them back on
 export const PUSH_OPT_OUT = "mt_push_opt_out";
 
 export const isPushOptedOut = () => localStorage.getItem(PUSH_OPT_OUT) === "1";

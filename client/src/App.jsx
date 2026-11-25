@@ -19,13 +19,13 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Login করা সবাই এই পেজগুলো দেখতে পারবে */}
+      {/* Any signed-in user can open these pages */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/lunch" element={<Lunch />} />
           <Route path="/snacks" element={<Snacks />} />
 
-          {/* শুধু Admin */}
+          {/* Admin only */}
           <Route element={<AdminRoute />}>
             <Route path="/admin/lunch-menu" element={<AdminLunch />} />
             <Route path="/admin/lunch-report" element={<AdminReports />} />

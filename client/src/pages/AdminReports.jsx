@@ -122,7 +122,7 @@ function Skeleton() {
 export default function AdminReports() {
   const dates = weekDates();
   const today = todayYmd();
-  // default date: আজকে যদি working day হয় তাহলে আজ, না হলে এই সপ্তাহের প্রথম দিন
+  // Default to today when it is a working day, otherwise the first day of the week
   const defaultDate = dates.includes(today) ? today : dates[0];
 
   const [date, setDate] = useState(defaultDate);
@@ -187,7 +187,7 @@ export default function AdminReports() {
         )}
       </div>
 
-      {/* তারিখ বাছাই — এই সপ্তাহের দিনগুলো quick button হিসেবে */}
+      {/* Date picker, with this week's days as quick buttons */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Calendar className="size-4 text-muted" aria-hidden />
         {dates.map((d) => (
