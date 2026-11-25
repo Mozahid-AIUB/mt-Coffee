@@ -45,7 +45,7 @@ export class PushController {
 
   @Post('subscribe')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'EMPLOYEE')
   async saveSubscription(
     @Body() subscriptionDto: SavePushSubscriptionDto,
     @Req() request: AuthenticatedRequest,
@@ -58,7 +58,7 @@ export class PushController {
 
   @Delete('subscribe')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
+  @Roles('ADMIN', 'EMPLOYEE')
   async removeSubscription(
     @Body() subscriptionDto: RemovePushSubscriptionDto,
     @Req() request: AuthenticatedRequest,

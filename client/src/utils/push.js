@@ -1,12 +1,10 @@
 // ======================================================================
 // পুশ নোটিফিকেশন ইউটিলিটি।
-// VAPID public key দিয়ে subscribe/unsubscribe করে।
+// ব্যাকএন্ড থেকে VAPID public key নিয়ে subscribe/unsubscribe করে।
 // লগআউট করলেও subscription থাকবে (spec মতে)।
 // ======================================================================
 
-// নকল VAPID key — ব্যাকএন্ড তৈরি হলে আসল key বসবে
-const VAPID_PUBLIC_KEY =
-  "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkGs-GDq6QAKJo9fjTNz3fInNa9SChFm7GDrePxlEo";
+import { getPublicKey, saveSubscription, removeSubscription } from "../api/pushApi";
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -15,6 +13,12 @@ function urlBase64ToUint8Array(base64String) {
   const arr = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
   return arr;
+}
+
+// browser-এর PushSubscription-এ বাড়তি field থাকে, backend শুধু এই দুটো নেয়
+function toPayload(sub) {
+  const { endpoint, keys } = sub.toJSON();
+  return { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } };
 }
 
 // ব্রাউজার push সাপোর্ট করে কিনা
@@ -49,30 +53,33 @@ export async function getSubscription() {
   }
 }
 
-// subscribe — permission চাইবে + subscription তৈরি করবে
+// subscribe — permission চাইবে + subscription তৈরি করে ব্যাকএন্ডে পাঠাবে
 export async function subscribe() {
   await getSW();
   const reg = await navigator.serviceWorker.ready;
+  const publicKey = await getPublicKey();
   const sub = await reg.pushManager.subscribe({
     userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
   });
-  // ব্যাকএন্ড তৈরি হলে এখানে sub পাঠাবো
-  // await fetch("/api/push/subscribe", { method: "POST", body: JSON.stringify(sub), headers: {"Content-Type":"application/json"} });
+  await saveSubscription(toPayload(sub));
   return sub;
 }
 
-// unsubscribe
+// unsubscribe — ব্যাকএন্ড থেকেও মুছে দেয়
 export async function unsubscribe() {
   const sub = await getSubscription();
-  if (sub) {
-    await sub.unsubscribe();
-    // ব্যাকএন্ড তৈরি হলে এখানে delete করবো
-    // await fetch("/api/push/unsubscribe", { method: "POST", body: JSON.stringify(sub), headers: {"Content-Type":"application/json"} });
+  if (!sub) return;
+  // আগে ব্যাকএন্ডে জানাই, নাহলে endpoint হারিয়ে যাবে
+  try {
+    await removeSubscription(sub.endpoint);
+  } catch {
+    // ব্যাকএন্ডে না থাকলেও ব্রাউজার থেকে সরিয়ে দিই
   }
+  await sub.unsubscribe();
 }
 
-// টেস্ট notification পাঠাই (mock — সত্যিকার push server ছাড়া)
+// টেস্ট notification — ব্রাউজারেই দেখায়, সার্ভার ছাড়া
 export async function sendTestNotification() {
   const reg = await navigator.serviceWorker.ready;
   await reg.showNotification("Manush Tech", {

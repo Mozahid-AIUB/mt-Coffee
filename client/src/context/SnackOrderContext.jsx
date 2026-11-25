@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthContext";
 import { getAdminOrders } from "../api/adminSnacksApi";
+import { isPushSupported, getPermission, subscribe } from "../utils/push";
+import { isPushOptedOut } from "../utils/pushPrefs";
 
 const SnackOrderContext = createContext(null);
 
@@ -24,7 +26,7 @@ function playBeep() {
 }
 
 export function SnackOrderProvider({ children }) {
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
   const prevCountRef = useRef(0);
 
@@ -51,6 +53,24 @@ export function SnackOrderProvider({ children }) {
     const id = setInterval(refresh, 10000);
     return () => clearInterval(id);
   }, [isAdmin, refresh]);
+
+  // লগইন করলেই push চালু করে দিই — নিজে বন্ধ করে থাকলে ছাড়া।
+  // admin নতুন অর্ডারের খবর পায়, কর্মীরা নতুন আইটেমের খবর পায়।
+  // browser-এ subscription থাকলেও সার্ভারে নাও থাকতে পারে, তাই প্রতিবার
+  // subscribe() ডাকি — একই endpoint হলে ব্যাকএন্ড upsert করে নেয়।
+  const pushTriedRef = useRef(false);
+  useEffect(() => {
+    if (!user || !isPushSupported()) return;
+    if (getPermission() === "denied") return;
+    if (isPushOptedOut()) return;
+    if (pushTriedRef.current) return; // StrictMode-এ effect দুবার চলে
+    pushTriedRef.current = true;
+    subscribe().catch(() => {
+      // token expire বা permission না পেলে পরের বার আবার চেষ্টা করতে দিই —
+      // admin চাইলে Snack Orders পেজের toggle থেকেও চালু করতে পারবে
+      pushTriedRef.current = false;
+    });
+  }, [user]);
 
   return (
     <SnackOrderContext.Provider value={{ pendingCount, refresh }}>
