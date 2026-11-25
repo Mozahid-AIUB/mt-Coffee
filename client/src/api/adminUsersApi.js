@@ -1,5 +1,5 @@
 // ======================================================================
-// নকল (mock) API — Admin Employee Management।
+// Mock API for admin employee management.
 //   getUsers()          -> GET   /api/admin/users?search=
 //   toggleActive()      -> PATCH /api/admin/users/:id/active
 // ======================================================================

@@ -1,5 +1,5 @@
-// স্ন্যাকস আইটেম আর অর্ডারের নকল ডাটা। localStorage-তে থাকে।
-// Admin Snacks page-ও এই একই store থেকে পড়বে।
+// Mock snack items and orders, kept in localStorage.
+// The admin snacks page reads from this same store.
 
 export const SNACK_ITEMS = [
   {

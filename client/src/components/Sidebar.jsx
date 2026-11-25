@@ -40,7 +40,7 @@ function Item({ to, icon: Icon, label, badge = 0, onClick }) {
 export default function Sidebar({ open, onClose, newSnackOrders = 0 }) {
   const { user, isAdmin, logout } = useAuth();
 
-  // Esc চাপলে বন্ধ হবে
+  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => e.key === "Escape" && onClose();
@@ -67,7 +67,7 @@ export default function Sidebar({ open, onClose, newSnackOrders = 0 }) {
     <AnimatePresence>
       {open && (
         <>
-          {/* পেছনের অন্ধকার পর্দা: এখানে চাপলে বন্ধ হবে */}
+          {/* Dim backdrop; clicking it closes the sidebar */}
           <motion.div
             key="overlay"
             initial={{ opacity: 0 }}

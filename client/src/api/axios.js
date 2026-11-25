@@ -15,14 +15,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// refresh token cookie-তে থাকে, তাই আলাদা instance দিয়েই কল করা যায়।
-// একই instance ব্যবহার করলে refresh নিজেও 401 খেয়ে অসীম লুপে পড়ত।
+// The refresh token lives in a cookie, so a separate instance can send it.
+// Reusing `api` here would let a failing refresh retry itself forever.
 const refreshClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true,
 });
 
-// একসাথে কয়েকটা কল 401 খেলে যেন একবারই refresh হয়
+// Share one refresh between every request that got a 401 at the same time
 let refreshing = null;
 
 function refreshAccessToken() {
@@ -44,7 +44,7 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
-    // শুধু একবারই retry করি, আর login/refresh কলের 401 ছেড়ে দিই
+    // Retry once only, and leave 401s from the auth calls alone
     if (
       error.response?.status !== 401 ||
       !original ||
@@ -61,7 +61,7 @@ api.interceptors.response.use(
       original.headers.Authorization = `Bearer ${token}`;
       return api(original);
     } catch {
-      // refresh-ও ব্যর্থ — সেশন শেষ, লগইন পেজে পাঠাই
+      // Refresh failed too: the session is over, so send the user to login
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem("mt_demo_user");
       if (!window.location.pathname.startsWith("/login")) {

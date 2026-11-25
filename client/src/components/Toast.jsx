@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { CheckCircle2, X, AlertCircle } from "lucide-react";
 
-// ছোট toast — উপরে ডানদিকে দেখায়, নিজে নিজে চলে যায়
-// ব্যবহার: <Toast message="..." type="success" onClose={fn} />
+// Small toast in the top-right corner that dismisses itself
+// Usage: <Toast message="..." type="success" onClose={fn} />
 
 const icons = {
   success: CheckCircle2,
@@ -52,7 +52,7 @@ export default function Toast({ message, type = "success", duration = 3000, onCl
   );
 }
 
-// একাধিক toast দেখানোর container
+// Container that stacks several toasts
 export function ToastContainer({ toasts, removeToast }) {
   return (
     <div className="pointer-events-none fixed right-4 top-20 z-50 flex flex-col gap-2">

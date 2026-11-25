@@ -185,14 +185,14 @@ export default function AdminSnacks() {
   const { refresh: refreshBadge } = useSnackOrders();
   const toastIdRef = useRef(0);
 
-  // পুশ নোটিফিকেশন state — admin-এর জন্য নিজে থেকেই চালু হয়
+  // Push notification state; it turns itself on for admins
   const [pushState, setPushState] = useState("loading"); // loading | unsupported | off | on | denied
   useEffect(() => {
     if (!isPushSupported()) { setPushState("unsupported"); return; }
     if (getPermission() === "denied") { setPushState("denied"); return; }
 
-    // subscribe করার কাজটা SnackOrderContext লগইনেই সেরে রাখে,
-    // এখানে শুধু বর্তমান অবস্থাটা দেখাই
+    // SnackOrderContext subscribes on login,
+    // so this only reflects the current state
     if (isPushOptedOut()) { setPushState("off"); return; }
     getSubscription()
       .then((sub) => setPushState(sub ? "on" : "off"))
@@ -238,7 +238,7 @@ export default function AdminSnacks() {
     load();
   }, [load]);
 
-  // ১০ সেকেন্ড পর পর poll
+  // Poll every 10 seconds
   useEffect(() => {
     const id = setInterval(load, 10000);
     return () => clearInterval(id);
@@ -273,7 +273,7 @@ export default function AdminSnacks() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* পুশ নোটিফিকেশন toggle */}
+          {/* Push notification toggle */}
           {pushState !== "unsupported" && pushState !== "loading" && (
             <button
               type="button"

@@ -15,7 +15,7 @@ function readSavedUser() {
   }
 }
 
-// এখন নকল (demo) login। NestJS API জোড়া লাগলে এখানে JWT বসবে।
+// Holds the signed-in user and the access token.
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(readSavedUser);
 

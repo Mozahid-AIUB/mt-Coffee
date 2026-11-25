@@ -105,7 +105,7 @@ function MenuForm({ editMenu, onSave, onCancel }) {
     if (!validate()) return;
     setBusy(true);
     try {
-      // ব্যাকএন্ড শুধু name/description নেয়, তাই id বাদ
+      // The API takes only name and description, so drop the id
       const cleanDishes = dishes.map((d) => ({
         name: d.name.trim(),
         description: (d.description || "").trim() || undefined,
@@ -139,7 +139,7 @@ function MenuForm({ editMenu, onSave, onCancel }) {
         )}
       </div>
 
-      {/* তারিখ বাছাই (শুধু create-এ) */}
+      {/* Date picker, shown when creating a menu */}
       {!isEdit && (
         <div className="mb-4">
           <label className="mb-1 block text-xs font-medium text-muted" htmlFor="menu-date">
@@ -159,7 +159,7 @@ function MenuForm({ editMenu, onSave, onCancel }) {
         </div>
       )}
 
-      {/* Dish তালিকা */}
+      {/* Dish list */}
       <div className="space-y-3">
         {dishes.map((d, i) => (
           <DishRow key={i} dish={d} index={i} onChange={changeDish} onRemove={removeDish} disabled={busy} />
@@ -380,7 +380,7 @@ export default function AdminLunch() {
         </AnimatePresence>
       </div>
 
-      {/* মেনু তালিকা */}
+      {/* Menu list */}
       <div className="mt-6">
         {error ? (
           <div className="rounded-3xl border border-danger/40 bg-danger/10 p-6 text-center">

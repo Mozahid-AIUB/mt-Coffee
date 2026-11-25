@@ -1,12 +1,12 @@
-// লাঞ্চ মেনু আর চেক-ইনের shared mock store।
-// Employee Lunch page আর Admin Lunch page দুটোই এখান থেকে পড়ে।
+// Shared mock store for lunch menus and check-ins.
+// Both the employee and admin lunch pages read from it.
 import { weekDates, dayNameOf } from "../utils/dhaka";
 
 const MENU_KEY = "mt_demo_menus";
 const CHECKIN_KEY = "mt_demo_checkins";
 const CHECKIN_DETAIL_KEY = "mt_demo_checkin_details";
 
-// রিপোর্টের জন্য নকল employee তালিকা
+// Mock employee list for the report
 export const FAKE_EMPLOYEES = [
   { id: "u1", fullName: "Mozahid Islam", employeeId: "MT-001" },
   { id: "u2", fullName: "Rafiq Ahmed", employeeId: "MT-002" },
@@ -17,7 +17,7 @@ export const FAKE_EMPLOYEES = [
   { id: "u7", fullName: "Mitu Begum", employeeId: "MT-007" },
 ];
 
-// প্রথমবার seed data
+// Seed data for the first run
 const SEED_MENUS = (() => {
   const dates = weekDates();
   const dishes = [
@@ -25,7 +25,7 @@ const SEED_MENUS = (() => {
       { name: "Chicken Biryani", description: "Basmati rice, roasted chicken, boiled egg" },
       { name: "Beef Tehari", description: "Spiced rice with tender beef" },
     ],
-    null, // এই দিনে মেনু নেই
+    null, // no menu on this day
     [
       { name: "Chicken Roast with Polao", description: "Polao, chicken roast, salad" },
       { name: "Beef Curry with Rice", description: "Beef bhuna, dal, mixed vegetables" },
@@ -59,7 +59,7 @@ export function readMenus() {
     const raw = localStorage.getItem(MENU_KEY);
     if (raw) return JSON.parse(raw);
   } catch { /* ignore */ }
-  // প্রথমবার seed ডাটা দিয়ে শুরু
+  // Start from the seed data on the first run
   saveMenus(SEED_MENUS);
   return SEED_MENUS;
 }
@@ -84,7 +84,7 @@ export function saveCheckins(map) {
   } catch { /* ignore */ }
 }
 
-// বিস্তারিত check-in তথ্য (রিপোর্টের জন্য — কে, কোন dish, কখন)
+// Detailed check-ins for the report: who picked which dish, and when
 export function readCheckinDetails() {
   try {
     return JSON.parse(localStorage.getItem(CHECKIN_DETAIL_KEY)) || {};
@@ -99,22 +99,22 @@ export function saveCheckinDetails(map) {
   } catch { /* ignore */ }
 }
 
-// নকল check-in seed — রিপোর্ট পেজে ডাটা দেখা যাবে
+// Seed some check-ins so the report page has something to show
 export function seedCheckinDetails() {
   const details = readCheckinDetails();
   const menus = readMenus();
   const checkins = readCheckins();
-  // ইতিমধ্যে seed হয়ে থাকলে skip
+  // Skip if the data was seeded already
   if (Object.keys(details).length > 0) return;
 
   const dates = Object.keys(menus);
   if (dates.length === 0) return;
 
-  // প্রতিটা date-এ কিছু employee-কে random dish assign করি
+  // Give a few employees a random dish on each date
   dates.forEach((date) => {
     const menu = menus[date];
     if (!menu || menu.dishes.length === 0) return;
-    // ৩-৬ জন employee check-in করবে
+    // Between 3 and 6 employees check in
     const count = 3 + Math.floor(Math.random() * 4);
     const emps = FAKE_EMPLOYEES.slice(0, Math.min(count, FAKE_EMPLOYEES.length));
     emps.forEach((emp) => {

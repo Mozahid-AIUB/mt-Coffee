@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
-/* রং বদলাতে চাইলে শুধু এই variable গুলো বদলাও */
+/* Change these variables to restyle the whole app */
 :root {
   --brand-500: #b5651d;
   --brand-600: #99530f;
@@ -24,7 +24,7 @@
   color-scheme: light;
 }
 
-/* Dark mode: <html data-theme="dark"> দিলে চালু হয় */
+/* Dark mode turns on with <html data-theme="dark"> */
 :root[data-theme="dark"] {
   --bg: #15100c;
   --surface: #1f1812;
@@ -43,7 +43,7 @@
   color-scheme: dark;
 }
 
-/* Tailwind-কে এই রংগুলোর নাম চেনানো: bg-accent, text-muted, border-border ইত্যাদি */
+/* Expose the colours to Tailwind: bg-accent, text-muted, border-border and so on */
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);

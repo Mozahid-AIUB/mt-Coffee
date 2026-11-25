@@ -8,7 +8,7 @@ import { popupConfirm, popupError, popupQuick } from "../utils/popup";
 import StatusBadge from "../components/StatusBadge";
 import SnackItemCard from "../components/SnackItemCard";
 
-// একটা অর্ডার row
+// One row in the order list
 function OrderRow({ order, onCancel }) {
   const [busy, setBusy] = useState(false);
   const time = new Date(order.createdAt).toLocaleTimeString("en-US", {
@@ -84,7 +84,7 @@ export default function Snacks() {
   const [items, setItems] = useState(null);
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState("");
-  const tick = useNow(10000); // প্রতি ১০ সেকেন্ডে update
+  const tick = useNow(10000); // re-render every 10 seconds
 
   const isOpen = snackServiceOpen(tick);
 
@@ -103,7 +103,7 @@ export default function Snacks() {
     load();
   }, [load]);
 
-  // নতুন orders দেখতে poll করি
+  // Poll so new orders show up
   useEffect(() => {
     const id = setInterval(async () => {
       try {
@@ -133,7 +133,7 @@ export default function Snacks() {
         Order tea or coffee between 8:00 AM and 8:00 PM.
       </p>
 
-      {/* সার্ভিস status ব্যানার */}
+      {/* Service status banner */}
       <div
         className={`mt-4 flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium ${
           isOpen
@@ -171,7 +171,7 @@ export default function Snacks() {
         )}
       </div>
 
-      {/* আজকের অর্ডার */}
+      {/* Today's orders */}
       {orders.length > 0 && (
         <section className="mt-8">
           <h2 className="mb-3 text-lg font-semibold">My Orders Today</h2>

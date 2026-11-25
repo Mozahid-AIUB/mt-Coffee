@@ -1,4 +1,4 @@
-// অর্ডারের status দেখানোর ব্যাজ — pending, preparing, served, cancelled
+// Badge for an order status: pending, preparing, served or cancelled
 const styles = {
   pending: "bg-warning/15 text-warning",
   preparing: "bg-accent/15 text-accent",
