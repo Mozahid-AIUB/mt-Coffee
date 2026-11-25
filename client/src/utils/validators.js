@@ -10,8 +10,13 @@ const emailField = z
   .min(1, "Email is required")
   .email("Enter a valid email address");
 
+const companyEmailField = emailField.refine(
+  (v) => v.toLowerCase().endsWith("@" + COMPANY_DOMAIN),
+  "Only Manush Tech company email is allowed"
+);
+
 export const loginSchema = z.object({
-  email: emailField,
+  email: companyEmailField,
   password: z.string().min(1, "Password is required"),
 });
 
@@ -32,10 +37,7 @@ export const registerSchema = z
       .trim()
       .min(1, "Phone number is required")
       .regex(/^(\+?88)?01[3-9]\d{8}$/, "Enter a valid Bangladeshi phone number"),
-    email: emailField.refine(
-      (v) => v.toLowerCase().endsWith("@" + COMPANY_DOMAIN),
-      "Only Manush Tech company email is allowed"
-    ),
+    email: companyEmailField,
     password: z
       .string()
       .min(1, "Password is required")
