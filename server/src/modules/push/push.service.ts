@@ -101,12 +101,31 @@ async notifyAdmins(notification: {
   body: string;
   data?: Record<string, string>;
 }) {
+  return this.notifyRole(UserRole.ADMIN, notification);
+}
+
+async notifyEmployees(notification: {
+  title: string;
+  body: string;
+  data?: Record<string, string>;
+}) {
+  return this.notifyRole(UserRole.EMPLOYEE, notification);
+}
+
+private async notifyRole(
+  role: UserRole,
+  notification: {
+    title: string;
+    body: string;
+    data?: Record<string, string>;
+  },
+) {
   const subscriptions =
     await this.prisma.pushSubscription.findMany({
       where: {
         user: {
           is: {
-            role: UserRole.ADMIN,
+            role,
             isActive: true,
           },
         },
